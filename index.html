@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>La Roue du Destin</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            /* Motif de fond sombre et amusant */
+            background-color: #0f172a;
+            background-image: radial-gradient(circle at 50% 50%, #1e293b 0%, #0f172a 100%);
+        }
+
+        /* Animation des confettis */
+        .confetti-piece {
+            position: absolute;
+            top: -20px;
+            opacity: 0;
+            animation: confettiFall linear forwards;
+        }
+
+        @keyframes confettiFall {
+            0% { 
+                opacity: 1; 
+                transform: translateY(0) rotate(0deg); 
+            }
+            100% { 
+                opacity: 1; 
+                transform: translateY(110vh) rotate(720deg); 
+            }
+        }
+
+        /* Effet de brillance pour le bouton */
+        .btn-glow:hover {
+            box-shadow: 0 0 25px rgba(236, 72, 153, 0.6);
+        }
+        
+        .wheel-container {
+            /* Ombre portée pour donner du volume à la roue */
+            filter: drop-shadow(0 20px 30px rgba(0,0,0,0.5));
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center overflow-hidden text-white relative px-4">
+
+    <!-- Décoration lumineuse en arrière-plan -->
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] max-w-3xl bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 rounded-full blur-[120px] opacity-20 -z-10 pointer-events-none"></div>
+
+    <!-- En-tête -->
+    <header class="text-center mb-8 sm:mb-12 z-10">
+        <h1 class="text-4xl sm:text-6xl font-black mb-2 text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-red-500 to-pink-500 drop-shadow-sm">
+            La Roue du Destin
+        </h1>
+        <p class="text-slate-300 text-lg sm:text-xl font-medium">Découvrez votre prochain univers !</p>
+    </header>
+
+    <!-- Conteneur de la Roue -->
+    <div class="relative w-full max-w-[320px] sm:max-w-[450px] aspect-square wheel-container z-10">
+        
+        <!-- Pointeur (Flèche) -->
+        <div class="absolute -top-6 sm:-top-8 left-1/2 -translate-x-1/2 z-20 drop-shadow-[0_6px_6px_rgba(0,0,0,0.7)] pointer-events-none">
+            <svg width="48" height="60" viewBox="0 0 48 60" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-10 sm:w-12 h-auto">
+                <path d="M24 60L4 20C4 20 -2 5 24 5C50 5 44 20 44 20L24 60Z" fill="#F43F5E"/>
+                <path d="M24 53L10 21C11 12 24 10 24 10C24 10 37 12 38 21L24 53Z" fill="#BE123C"/>
+                <circle cx="24" cy="15" r="4" fill="#FDA4AF"/>
+            </svg>
+        </div>
+
+        <!-- Canvas de la Roue -->
+        <canvas id="wheel" width="600" height="600" class="w-full h-full rounded-full border-4 border-slate-800 bg-slate-800 origin-center"></canvas>
+    </div>
+
+    <!-- Bouton pour tourner -->
+    <button id="spinBtn" class="mt-12 px-10 py-5 sm:px-14 sm:py-6 bg-gradient-to-r from-pink-500 to-orange-500 rounded-full font-black text-xl sm:text-2xl text-white transform hover:scale-105 active:scale-95 transition-all duration-200 btn-glow z-10 border-b-4 border-pink-700 shadow-xl">
+        TOURNER LA ROUE
+    </button>
+
+    <!-- Modal de Résultat -->
+    <div id="resultModal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 opacity-0 transition-opacity duration-300 px-4">
+        <div id="modalContent" class="bg-white text-slate-900 p-8 sm:p-12 rounded-[2rem] shadow-2xl text-center transform scale-75 transition-transform duration-300 border-4 border-pink-500 max-w-lg w-full relative overflow-hidden">
+            <!-- Décoration interne du modal -->
+            <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500"></div>
+            
+            <h2 class="text-2xl sm:text-3xl font-bold mb-4 text-slate-500">Le destin a choisi...</h2>
+            
+            <div id="resultText" class="text-4xl sm:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 py-4 drop-shadow-sm break-words leading-tight">
+                <!-- Le résultat sera injecté ici -->
+            </div>
+            
+            <button id="closeModalBtn" class="mt-8 px-8 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-full font-bold text-lg transition-colors border-2 border-slate-200 shadow-sm">
+                C'est parti !
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Configuration de la Roue
+        const canvas = document.getElementById('wheel');
+        const ctx = canvas.getContext('2d');
+        const spinBtn = document.getElementById('spinBtn');
+        const resultModal = document.getElementById('resultModal');
+        const modalContent = document.getElementById('modalContent');
+        const resultText = document.getElementById('resultText');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+
+        // Les thèmes demandés
+        const segments = [
+            'Star Wars', 
+            'Marvel', 
+            'Ninjago', 
+            'Friends', 
+            'Minecraft', 
+            'Harry Potter', 
+            'One Piece'
+        ];
+
+        // Liens des quiz pour chaque thème
+        const quizUrls = {
+            'Star Wars': 'https://raoulgrossamat-wq.github.io/Quizz-Star-wars/',
+            'Marvel': 'LEGO Marvel - Morning Brief Quiz',
+            'Ninjago': 'https://raoulgrossamat-wq.github.io/Ninjago-Quizz/',
+            'Friends': 'LEGO Friends - Morning Brief Quiz',
+            'Minecraft': 'LEGO Minecraft - Morning Brief Quiz',
+            'Harry Potter': 'https://raoulgrossamat-wq.github.io/Quizz-Harry-Potter/',
+            'One Piece': 'LEGO One Piece - Morning Brief Quiz'
+        };
+
+        // Palette de couleurs vives correspondante
+        const colors = [
+            '#0ea5e9', // Star Wars (Bleu sabre)
+            '#ef4444', // Marvel (Rouge)
+            '#f59e0b', // Ninjago (Jaune/Orange)
+            '#8b5cf6', // Friends (Violet)
+            '#22c55e', // Minecraft (Vert)
+            '#9f1239', // Harry Potter (Bordeaux)
+            '#f97316'  // One Piece (Orange vif)
+        ];
+
+        let currentRotation = 0;
+        let isSpinning = false;
+        let currentWinnerTheme = '';
+        const numSegments = segments.length;
+        const sliceAngle = (2 * Math.PI) / numSegments;
+        const sliceAngleDeg = 360 / numSegments;
+
+        // Fonction pour dessiner la roue
+        function drawWheel() {
+            // Nettoyer et configurer le canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Se placer au centre du canvas
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const radius = centerX - 10; // Marge de 10px
+
+            ctx.translate(centerX, centerY);
+            
+            // Rotation initiale pour que le segment 0 commence parfaitement en haut (à midi)
+            ctx.rotate(-Math.PI / 2);
+
+            for (let i = 0; i < numSegments; i++) {
+                // 1. Dessiner la part de camembert
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.arc(0, 0, radius, i * sliceAngle, (i + 1) * sliceAngle);
+                ctx.fillStyle = colors[i];
+                ctx.fill();
+
+                // Ligne de séparation optionnelle
+                ctx.lineWidth = 3;
+                ctx.strokeStyle = '#1e293b';
+                ctx.stroke();
+
+                // 2. Ajouter le texte
+                ctx.save();
+                // Tourner au milieu de la part
+                ctx.rotate(i * sliceAngle + sliceAngle / 2);
+                
+                ctx.textAlign = "right";
+                ctx.textBaseline = "middle";
+                ctx.fillStyle = "#ffffff";
+                // Police audacieuse et ombrée pour lisibilité sur toutes les couleurs
+                ctx.font = "bold 34px Inter, sans-serif";
+                ctx.shadowColor = "rgba(0, 0, 0, 0.7)";
+                ctx.shadowBlur = 6;
+                ctx.shadowOffsetX = 2;
+                ctx.shadowOffsetY = 2;
+                
+                // Dessiner le texte près du bord extérieur
+                ctx.fillText(segments[i], radius - 35, 0);
+                ctx.restore();
+
+                // 3. Dessiner un "clou" (peg) à l'intersection des parts (sur le bord)
+                ctx.save();
+                ctx.rotate(i * sliceAngle);
+                ctx.beginPath();
+                ctx.arc(radius - 12, 0, 8, 0, 2 * Math.PI);
+                ctx.fillStyle = '#f8fafc';
+                ctx.fill();
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = '#94a3b8';
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            // 4. Dessiner le moyeu central
+            ctx.beginPath();
+            ctx.arc(0, 0, 35, 0, 2 * Math.PI);
+            ctx.fillStyle = '#ffffff';
+            ctx.fill();
+            ctx.lineWidth = 6;
+            ctx.strokeStyle = '#334155';
+            ctx.stroke();
+
+            // Petit cercle intérieur du moyeu
+            ctx.beginPath();
+            ctx.arc(0, 0, 12, 0, 2 * Math.PI);
+            ctx.fillStyle = '#cbd5e1';
+            ctx.fill();
+
+            // Réinitialiser la transformation pour les prochains dessins
+            ctx.resetTransform();
+        }
+
+        // Fonction pour lancer l'animation des confettis
+        function triggerConfetti() {
+            const confettiCount = 100;
+            const container = document.createElement('div');
+            container.style.position = 'fixed';
+            container.style.inset = '0';
+            container.style.pointerEvents = 'none';
+            container.style.zIndex = '100';
+            document.body.appendChild(container);
+
+            for (let i = 0; i < confettiCount; i++) {
+                const conf = document.createElement('div');
+                conf.classList.add('confetti-piece');
+                
+                // Forme et position aléatoires
+                conf.style.left = Math.random() * 100 + 'vw';
+                conf.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                
+                const size = (Math.random() * 12 + 6) + 'px';
+                conf.style.width = size;
+                conf.style.height = size;
+                if (Math.random() > 0.5) conf.style.borderRadius = '50%'; // Mixte cercles/carrés
+                
+                // Vitesse de chute aléatoire
+                conf.style.animationDuration = (Math.random() * 2 + 2.5) + 's';
+                conf.style.animationDelay = (Math.random() * 0.2) + 's';
+                
+                container.appendChild(conf);
+            }
+
+            // Nettoyer le DOM après l'animation
+            setTimeout(() => {
+                container.remove();
+            }, 5000);
+        }
+
+        // Fonction d'ouverture du modal de résultat
+        function openModal(winner) {
+            currentWinnerTheme = winner;
+            resultText.innerText = winner;
+            resultModal.classList.remove('hidden');
+            resultModal.classList.add('flex');
+            
+            // Léger délai pour permettre la transition CSS
+            requestAnimationFrame(() => {
+                resultModal.classList.remove('opacity-0');
+                modalContent.classList.remove('scale-75');
+                modalContent.classList.add('scale-100');
+            });
+            
+            triggerConfetti();
+        }
+
+        // Fonction de fermeture du modal
+        function closeModal() {
+            resultModal.classList.add('opacity-0');
+            modalContent.classList.remove('scale-100');
+            modalContent.classList.add('scale-75');
+            
+            setTimeout(() => {
+                resultModal.classList.add('hidden');
+                resultModal.classList.remove('flex');
+            }, 300); // Correspond à la durée de duration-300 dans Tailwind
+        }
+
+        // Événement : Lancer la roue
+        spinBtn.addEventListener('click', () => {
+            if (isSpinning) return;
+            isSpinning = true;
+
+            // Désactiver le bouton visuellement
+            spinBtn.classList.add('opacity-60', 'cursor-not-allowed', 'scale-95');
+            spinBtn.classList.remove('hover:scale-105', 'btn-glow');
+
+            // Calcul du nombre de tours (entre 5 et 8 tours complets) + angle aléatoire
+            const extraSpins = 5 + Math.floor(Math.random() * 4);
+            const randomOffset = Math.floor(Math.random() * 360);
+            
+            currentRotation += (extraSpins * 360) + randomOffset;
+
+            // Application de la rotation via CSS avec une courbe d'accélération/décélération réaliste
+            canvas.style.transition = 'transform 4.5s cubic-bezier(0.15, 0.85, 0.15, 1)';
+            canvas.style.transform = `rotate(${currentRotation}deg)`;
+        });
+
+        // Événement : Fin de la rotation
+        canvas.addEventListener('transitionend', (e) => {
+            if (!isSpinning || e.propertyName !== 'transform') return;
+            isSpinning = false;
+
+            // Réactiver le bouton
+            spinBtn.classList.remove('opacity-60', 'cursor-not-allowed', 'scale-95');
+            spinBtn.classList.add('hover:scale-105', 'btn-glow');
+
+            // Déduire quel segment est en haut (le pointeur est fixe, c'est la roue qui tourne)
+            // On calcule l'angle local par rapport au point zéro (haut de la roue)
+            const localAngle = (360 - (currentRotation % 360)) % 360;
+            const winningIndex = Math.floor(localAngle / sliceAngleDeg);
+            const winner = segments[winningIndex];
+
+            // Afficher le vainqueur
+            openModal(winner);
+        });
+
+        // Événement : Fermer le modal et ouvrir le quiz
+        closeModalBtn.addEventListener('click', () => {
+            if (currentWinnerTheme && quizUrls[currentWinnerTheme]) {
+                // Ouvrir le lien spécifique au thème dans un nouvel onglet
+                window.open(quizUrls[currentWinnerTheme], '_blank');
+            }
+            closeModal();
+        });
+
+        // Dessiner la roue au chargement
+        window.onload = drawWheel;
+
+    </script>
+</body>
+</html>
