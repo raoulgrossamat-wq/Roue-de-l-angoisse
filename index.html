@@ -97,6 +97,10 @@
         </div>
     </div>
 
+    <!-- Éléments Audio -->
+    <audio id="bgMusic" src="musique-fond.mp3" loop></audio>
+    <audio id="wheelSound" src="bruit-roue.mp3" loop></audio>
+
     <script>
         // Configuration de la Roue
         const canvas = document.getElementById('wheel');
@@ -106,6 +110,8 @@
         const modalContent = document.getElementById('modalContent');
         const resultText = document.getElementById('resultText');
         const closeModalBtn = document.getElementById('closeModalBtn');
+        const bgMusic = document.getElementById('bgMusic');
+        const wheelSound = document.getElementById('wheelSound');
 
         // Les thèmes demandés
         const segments = [
@@ -115,18 +121,20 @@
             'Friends', 
             'Minecraft', 
             'Harry Potter', 
-            'One Piece'
+            'One Piece',
+            'LEGO'
         ];
 
         // Liens des quiz pour chaque thème
         const quizUrls = {
             'Star Wars': 'https://raoulgrossamat-wq.github.io/Quizz-Star-wars/',
-            'Marvel': 'https://raoulgrossamat-wq.github.io/Quizz-Marvel/',
+            'Marvel': 'LEGO Marvel - Morning Brief Quiz',
             'Ninjago': 'https://raoulgrossamat-wq.github.io/Ninjago-Quizz/',
-            'Friends': 'https://raoulgrossamat-wq.github.io/Quizz-Friends/',
-            'Minecraft': 'https://raoulgrossamat-wq.github.io/Quizz-Minecraft/',
+            'Friends': 'LEGO Friends - Morning Brief Quiz',
+            'Minecraft': 'LEGO Minecraft - Morning Brief Quiz',
             'Harry Potter': 'https://raoulgrossamat-wq.github.io/Quizz-Harry-Potter/',
-            'One Piece': 'https://raoulgrossamat-wq.github.io/Quizz-One-Piece/'
+            'One Piece': 'LEGO One Piece - Morning Brief Quiz',
+            'LEGO': 'LIEN_QUIZ_LEGO_ICI'
         };
 
         // Palette de couleurs vives correspondante
@@ -137,7 +145,8 @@
             '#8b5cf6', // Friends (Violet)
             '#22c55e', // Minecraft (Vert)
             '#9f1239', // Harry Potter (Bordeaux)
-            '#f97316'  // One Piece (Orange vif)
+            '#f97316', // One Piece (Orange vif)
+            '#eab308'  // LEGO (Jaune classique)
         ];
 
         let currentRotation = 0;
@@ -291,6 +300,16 @@
             }, 300); // Correspond à la durée de duration-300 dans Tailwind
         }
 
+        // Lancement de la musique de fond au premier clic sur la page
+        let musicStarted = false;
+        document.body.addEventListener('click', () => {
+            if (!musicStarted) {
+                bgMusic.volume = 0.4; // Volume modéré pour le fond
+                bgMusic.play().catch(e => console.log("La lecture audio a été bloquée :", e));
+                musicStarted = true;
+            }
+        }, { once: true }); // S'exécute une seule fois
+
         // Événement : Lancer la roue
         spinBtn.addEventListener('click', () => {
             if (isSpinning) return;
@@ -299,6 +318,10 @@
             // Désactiver le bouton visuellement
             spinBtn.classList.add('opacity-60', 'cursor-not-allowed', 'scale-95');
             spinBtn.classList.remove('hover:scale-105', 'btn-glow');
+
+            // Jouer le son de la roue
+            wheelSound.currentTime = 0;
+            wheelSound.play().catch(e => console.log("La lecture audio a été bloquée :", e));
 
             // Calcul du nombre de tours (entre 5 et 8 tours complets) + angle aléatoire
             const extraSpins = 5 + Math.floor(Math.random() * 4);
@@ -315,6 +338,9 @@
         canvas.addEventListener('transitionend', (e) => {
             if (!isSpinning || e.propertyName !== 'transform') return;
             isSpinning = false;
+
+            // Arrêter le son de la roue
+            wheelSound.pause();
 
             // Réactiver le bouton
             spinBtn.classList.remove('opacity-60', 'cursor-not-allowed', 'scale-95');
