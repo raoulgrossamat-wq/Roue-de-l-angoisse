@@ -99,6 +99,14 @@
 
     <!-- Éléments Audio -->
     <audio id="bgMusic" src="musique-fond.mp3" loop></audio>
+    <script>
+  document.body.addEventListener('click', function() {
+    const musique = document.getElementById('bgMusic');
+    if (musique.paused) {
+      musique.play().catch(erreur => console.log("Attente d'interaction..."));
+    }
+  }, { once: true });
+</script>
 
     <script>
         // Configuration de la Roue
@@ -158,12 +166,12 @@
         // Liens des quiz pour chaque thème
         const quizUrls = {
             'Star Wars': 'https://raoulgrossamat-wq.github.io/Quizz-Star-wars/',
-            'Marvel': 'LEGO Marvel - Morning Brief Quiz',
+            'Marvel': 'https://raoulgrossamat-wq.github.io/Quizz-Marvel/',
             'Ninjago': 'https://raoulgrossamat-wq.github.io/Ninjago-Quizz/',
-            'Friends': 'LEGO Friends - Morning Brief Quiz',
-            'Minecraft': 'LEGO Minecraft - Morning Brief Quiz',
+            'Friends': 'https://raoulgrossamat-wq.github.io/Quizz-Friends/',
+            'Minecraft': 'https://raoulgrossamat-wq.github.io/Quizz-Minecraft/',
             'Harry Potter': 'https://raoulgrossamat-wq.github.io/Quizz-Harry-Potter/',
-            'One Piece': 'LEGO One Piece - Morning Brief Quiz',
+            'One Piece': 'https://raoulgrossamat-wq.github.io/Quizz-One-Piece/',
             'LEGO': 'https://raoulgrossamat-wq.github.io/Quizz-Histoire-LEGO/'
         };
 
