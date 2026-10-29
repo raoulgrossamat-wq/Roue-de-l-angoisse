@@ -99,7 +99,6 @@
 
     <!-- Éléments Audio -->
     <audio id="bgMusic" src="musique-fond.mp3" loop></audio>
-    <audio id="wheelSound" src="bruit-roue.mp3" loop></audio>
 
     <script>
         // Configuration de la Roue
@@ -111,7 +110,38 @@
         const resultText = document.getElementById('resultText');
         const closeModalBtn = document.getElementById('closeModalBtn');
         const bgMusic = document.getElementById('bgMusic');
-        const wheelSound = document.getElementById('wheelSound');
+
+        // Web Audio API pour le son de 'tick'
+        let audioCtx;
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function playTick() {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            // Son court et mécanique (triangle wave)
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(800, audioCtx.currentTime); // Pitch aigu
+            osc.frequency.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
+            
+            // Baisse rapide du volume pour faire un effet "clic"
+            gainNode.gain.setValueAtTime(0.4, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
+            
+            osc.start(audioCtx.currentTime);
+            osc.stop(audioCtx.currentTime + 0.05);
+        }
 
         // Les thèmes demandés
         const segments = [
@@ -303,6 +333,7 @@
         // Lancement de la musique de fond au premier clic sur la page
         let musicStarted = false;
         document.body.addEventListener('click', () => {
+            initAudio(); // Initialiser l'API Web Audio pour la roue
             if (!musicStarted) {
                 bgMusic.volume = 0.4; // Volume modéré pour le fond
                 bgMusic.play().catch(e => console.log("La lecture audio a été bloquée :", e));
@@ -310,18 +341,55 @@
             }
         }, { once: true }); // S'exécute une seule fois
 
+        // Système de suivi pour les sons de "ticks" de la roue
+        let lastTickAngle = -1;
+        
+        function tickLoop() {
+            if (!isSpinning) return;
+            
+            // Récupérer l'angle actuel pendant la transition CSS
+            const transformStr = window.getComputedStyle(canvas).transform;
+            let angle = 0;
+            if (transformStr !== 'none') {
+                const matrix = new DOMMatrix(transformStr);
+                angle = Math.atan2(matrix.b, matrix.a) * (180 / Math.PI);
+                if (angle < 0) angle += 360;
+            }
+            
+            // Jouer le son si la roue passe sur une bordure de segment
+            const currentSegment = Math.floor(angle / sliceAngleDeg);
+            if (currentSegment !== lastTickAngle && lastTickAngle !== -1) {
+                playTick();
+            }
+            lastTickAngle = currentSegment;
+            
+            requestAnimationFrame(tickLoop);
+        }
+
         // Événement : Lancer la roue
         spinBtn.addEventListener('click', () => {
             if (isSpinning) return;
             isSpinning = true;
 
+            initAudio(); // Assurer que le contexte audio est réveillé
+
             // Désactiver le bouton visuellement
             spinBtn.classList.add('opacity-60', 'cursor-not-allowed', 'scale-95');
             spinBtn.classList.remove('hover:scale-105', 'btn-glow');
 
-            // Jouer le son de la roue
-            wheelSound.currentTime = 0;
-            wheelSound.play().catch(e => console.log("La lecture audio a été bloquée :", e));
+            // Initialiser l'angle précédent pour la détection du tick
+            const transformStr = window.getComputedStyle(canvas).transform;
+            if (transformStr !== 'none') {
+                const matrix = new DOMMatrix(transformStr);
+                let initialAngle = Math.atan2(matrix.b, matrix.a) * (180 / Math.PI);
+                if (initialAngle < 0) initialAngle += 360;
+                lastTickAngle = Math.floor(initialAngle / sliceAngleDeg);
+            } else {
+                lastTickAngle = 0;
+            }
+
+            // Démarrer la boucle de vérification des ticks
+            requestAnimationFrame(tickLoop);
 
             // Calcul du nombre de tours (entre 5 et 8 tours complets) + angle aléatoire
             const extraSpins = 5 + Math.floor(Math.random() * 4);
@@ -338,9 +406,6 @@
         canvas.addEventListener('transitionend', (e) => {
             if (!isSpinning || e.propertyName !== 'transform') return;
             isSpinning = false;
-
-            // Arrêter le son de la roue
-            wheelSound.pause();
 
             // Réactiver le bouton
             spinBtn.classList.remove('opacity-60', 'cursor-not-allowed', 'scale-95');
